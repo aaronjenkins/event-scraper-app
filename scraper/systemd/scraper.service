@@ -1,0 +1,14 @@
+[Unit]
+Description=scraper DB-driven scrape tick
+After=network.target
+
+[Service]
+Type=oneshot
+User=eventscraper
+Group=eventscraper
+WorkingDirectory=/opt/eventscraper/scraper
+EnvironmentFile=-/opt/eventscraper/scraper/.env
+ExecStart=/opt/eventscraper/scraper/.venv/bin/python /opt/eventscraper/scraper/scrape.py
+
+[Install]
+WantedBy=multi-user.target

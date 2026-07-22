@@ -1,0 +1,14 @@
+[Unit]
+Description=scraper nightly retention pruner
+After=network.target
+
+[Service]
+Type=oneshot
+User=eventscraper
+Group=eventscraper
+WorkingDirectory=/opt/eventscraper/scraper
+EnvironmentFile=-/opt/eventscraper/scraper/.env
+ExecStart=/opt/eventscraper/scraper/.venv/bin/python /opt/eventscraper/scraper/retention.py
+
+[Install]
+WantedBy=multi-user.target

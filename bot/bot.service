@@ -1,0 +1,11 @@
+[Unit]
+Description=Run bot (python index.py)
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/eventscraper/bot
+ExecStart=/opt/eventscraper/bot/.venv/bin/python /opt/eventscraper/bot/index.py
+
+[Install]
+WantedBy=multi-user.target

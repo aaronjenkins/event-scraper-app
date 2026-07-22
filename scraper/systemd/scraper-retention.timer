@@ -1,0 +1,12 @@
+[Unit]
+Description=scraper nightly retention prune (events + fetch_log)
+
+[Timer]
+# Fire at 04:00 local, three hours before the 07:00 scrape tick so the
+# pruner has exclusive DB access and the day starts with a trim table.
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=scraper-retention.service
+
+[Install]
+WantedBy=timers.target

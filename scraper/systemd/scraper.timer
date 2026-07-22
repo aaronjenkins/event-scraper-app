@@ -1,0 +1,15 @@
+[Unit]
+Description=scraper daily scrape tick
+
+[Timer]
+# Fire once a day at 07:00 local time. Venue rows in events.venues use
+# per-row cron expressions (default '0 7 * * *'), so anything scheduled at or
+# before this wake-up window will be picked up. If you later add a venue that
+# needs sub-day cadence, bump this up (e.g. OnCalendar=hourly) — the croniter
+# gate inside scrape.py stays correct either way.
+OnCalendar=*-*-* 07:00:00
+Persistent=true
+Unit=scraper.service
+
+[Install]
+WantedBy=timers.target

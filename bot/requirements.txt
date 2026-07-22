@@ -1,0 +1,6 @@
+python-dotenv
+requests
+google-search-results
+icalendar
+rapidfuzz
+psycopg2-binary
