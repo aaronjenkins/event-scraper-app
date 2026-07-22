@@ -15,6 +15,7 @@ venue list, parsers, and config are swappable for any city.
 | [`scraper/`](scraper) | Fetches each venue's calendar on a schedule, runs a per-venue parser, and writes normalized events to Postgres. | Python + psycopg2 |
 | [`bot/`](bot) | Merges venue events with ESPN sports and SerpAPI; dedupes; LLM-classifies; writes `events.json`; posts a digest to a Signal webhook. | Python |
 | [`ui/`](ui) | Renders `events.json` as an agenda with per-event calendar export. | Vite + React + TypeScript |
+| [`signal/`](signal) | *Optional.* A minimal Signal webhook (over signal-cli-rest-api) for the daily digest. | Python + Docker |
 
 ```
 venue sites → scraper → Postgres (events.events) ┐
@@ -60,7 +61,7 @@ Highlights:
 - **`SERPAPI_KEY` / `SERP_API_KEY`** — [SerpAPI](https://serpapi.com) key for the Google-Events source (optional).
 - **`LITELLM_URL` / `LITELLM_KEY`** — an OpenAI-compatible ([LiteLLM](https://litellm.ai)) endpoint for emoji/artist classification. Set `*_LLM=0` to disable.
 - **`RENDER_URL` / `RENDER_API_KEY`** — a headless-browser render microservice with `/render` and `/capture` endpoints, used for JS-heavy or bot-protected venues. Static venues need none.
-- **`SIGNAL_WEBHOOK_URL` / `SIGNAL_WEBHOOK_KEY` / `SIGNAL_GROUP_ID`** — an optional webhook (expects `POST /send {message, group_id, api_key}`) for the daily digest and scraper alerts. Leave unset to disable.
+- **`SIGNAL_WEBHOOK_URL` / `SIGNAL_WEBHOOK_KEY` / `SIGNAL_GROUP_ID`** — an optional webhook (expects `POST /send {message, group_id, api_key}`) for the daily digest and scraper alerts. Leave unset to disable, or run the ready-made one in [`signal/`](signal).
 
 ## Adding your venues
 

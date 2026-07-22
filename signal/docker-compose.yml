@@ -1,0 +1,33 @@
+# Signal sender for event-scraper-app.
+#   signal-cli-rest-api : talks to Signal (link a device, look up groups, send)
+#   signal-webhook      : the POST /send {message, group_id, api_key} shim the
+#                         bot/scraper point SIGNAL_WEBHOOK_URL at
+#
+# First run: `cp .env.example .env`, set SIGNAL_NUMBER, then `docker compose up -d`
+# and follow README.md to link a device + find your group id.
+name: signal-webhook
+
+services:
+  signal-cli-rest-api:
+    image: bbernhard/signal-cli-rest-api:latest
+    container_name: signal-cli-rest-api
+    environment:
+      - MODE=native
+    ports:
+      - "7111:8080"     # for device linking + group lookup from your browser
+    volumes:
+      - ./signal-data:/home/.local/share/signal-cli
+    restart: unless-stopped
+
+  signal-webhook:
+    build: .
+    container_name: signal-webhook
+    environment:
+      - SIGNAL_API_URL=http://signal-cli-rest-api:8080
+      - SIGNAL_NUMBER=${SIGNAL_NUMBER:?set SIGNAL_NUMBER in signal/.env}
+      - SIGNAL_WEBHOOK_KEY=${SIGNAL_WEBHOOK_KEY:-}
+    ports:
+      - "7200:8080"     # this is the SIGNAL_WEBHOOK_URL the app posts to
+    depends_on:
+      - signal-cli-rest-api
+    restart: unless-stopped
