@@ -62,6 +62,24 @@ Highlights:
 - **`RENDER_URL` / `RENDER_API_KEY`** — a headless-browser render microservice with `/render` and `/capture` endpoints, used for JS-heavy or bot-protected venues. Static venues need none.
 - **`SIGNAL_WEBHOOK_URL` / `SIGNAL_WEBHOOK_KEY` / `SIGNAL_GROUP_ID`** — an optional webhook (expects `POST /send {message, group_id, api_key}`) for the daily digest and scraper alerts. Leave unset to disable, or run the ready-made one in [`signal/`](signal).
 
+## Scheduling
+
+The scraper and bot are one-shot scripts — run them on a timer. Example
+systemd unit + timer files are included (edit `User=` and the paths first, then
+`systemctl enable --now <unit>.timer`); or wire the scripts into `cron` / any
+scheduler.
+
+- **Scraper** (`scrape.py`) reads `events.venues` and, per row, compares its cron
+  `schedule` (default `0 7 * * *`) against `last_fetched_at`, fetching only
+  what's due — so a single tick handles every venue. Run it at least as often as
+  your most frequent venue cron. Examples: [`scraper/systemd/`](scraper/systemd)
+  `scraper.timer` (daily 07:00) + `scraper.service`. Raise `OnCalendar` (e.g.
+  `hourly`) for sub-day venues — the per-venue gate stays correct.
+- **Bot** (`index.py`) runs once a day after the scrape. Example:
+  [`bot/`](bot) `bot.timer` (10:00) + `bot.service`.
+- **Retention** (`retention.py`) is an optional nightly prune of old events +
+  `fetch_log`. Example: `scraper/systemd/scraper-retention.timer` (04:00).
+
 ## Adding your venues
 
 This ships as a blank template — no venues are seeded.

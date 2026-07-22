@@ -1,6 +1,6 @@
 """scraper — DB-driven scheduled scraper.
 
-A single systemd timer fires `scrape.py` every 5 minutes. It reads
+A timer fires `scrape.py` on a schedule (see scraper/systemd/). It reads
 events.venues, checks each row's cron schedule against last_fetched_at,
 fetches anything that is due, writes the raw page into the snapshot path, and
 logs the result. No per-venue timers, no hand-written site modules.
