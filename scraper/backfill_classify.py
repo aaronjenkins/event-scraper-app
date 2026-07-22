@@ -1,10 +1,10 @@
 """One-shot backfill — re-classify existing events for emoji + artists.
 
 Pulls every enabled-venue event whose artists column is still the empty
-default (i.e. never touched by the post-2026-04-18 classifier), batches
-them through llm.classify_batch, writes back. Intended to be run once
-after schema_v4 + the llm.py prompt change; after that, daily scrapes
-keep new inserts current and this script stays idle.
+default (i.e. never touched by the classifier), batches them through
+llm.classify_batch, writes back. Intended as a one-off after adding the
+artists column or changing the classifier; daily scrapes keep new inserts
+current, so this stays idle afterwards.
 
 Batches of 50 per LLM call to keep max_tokens reasonable.
 """

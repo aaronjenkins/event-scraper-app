@@ -29,7 +29,6 @@ ESPN / SerpAPI ─────────────────────�
 # 1. Postgres — create a database and load the schema
 createdb events
 psql events -f scraper/schema.sql
-for v in scraper/schema_v*.sql; do psql events -f "$v"; done   # migrations, in order
 
 # 2. Config
 cp .env.example .env        # then edit — at minimum set DATABASE_URL

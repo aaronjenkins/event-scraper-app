@@ -1,57 +1,80 @@
--- `events` schema: venue registry + scraped events.
---
--- Re-runnable: uses IF NOT EXISTS and idempotent seeds.
+-- `events` schema: venue registry + scraped events. Single source of truth for
+-- the DB layout. Re-runnable: IF NOT EXISTS everywhere, idempotent seeds.
 
 CREATE SCHEMA IF NOT EXISTS events;
 
+-- Venues to scrape. Each row names the parser that handles its page and how to
+-- fetch it (static / browser-render / XHR-capture).
 CREATE TABLE IF NOT EXISTS events.venues (
-    id              serial PRIMARY KEY,
-    slug            text UNIQUE NOT NULL,
-    name            text NOT NULL,
-    url             text,
-    parser          text NOT NULL,
-    snapshot_path   text,
-    schedule        text NOT NULL DEFAULT '0 7 * * *',
-    last_fetched_at timestamptz,
-    enabled         boolean NOT NULL DEFAULT true,
-    notes           text,
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    updated_at      timestamptz NOT NULL DEFAULT now()
+    id                   serial PRIMARY KEY,
+    slug                 text UNIQUE NOT NULL,
+    name                 text NOT NULL,
+    url                  text,
+    parser               text NOT NULL,                       -- key in scraper/parsers/ PARSERS
+    snapshot_path        text,                                -- override for where the raw page is cached
+    schedule             text NOT NULL DEFAULT '0 7 * * *',   -- cron; when this venue is due
+    render_mode          text NOT NULL DEFAULT 'static',      -- static | browser | capture
+    render_wait_selector text,                                -- 'browser': CSS selector to await before snapshot
+    render_capture_match text,                                -- 'capture': substring of the XHR URL to intercept
+    last_fetched_at      timestamptz,
+    last_parsed_count    integer,                             -- rows the last parse produced (drop-alert basis)
+    allow_zero_parse     boolean NOT NULL DEFAULT false,      -- source legitimately empty sometimes
+    enabled              boolean NOT NULL DEFAULT true,
+    notes                text,
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    updated_at           timestamptz NOT NULL DEFAULT now()
 );
 
--- last_parsed_count powers the parser-collapse alert in scrape.py. When a
--- run produces 0 rows after the previous run produced >0, we post to Signal.
-ALTER TABLE events.venues ADD COLUMN IF NOT EXISTS last_parsed_count integer;
-
--- render_mode picks the fetch path in scrape.py: 'static' = requests.get,
--- 'browser' = the render service /render (full browser navigation), 'capture' =
--- the render service /capture (intercept a session-authenticated XHR; needs
--- render_capture_match — see schema_v5.sql).
--- render_wait_selector is consulted by 'browser' mode to wait for a CSS
--- selector before snapshotting the DOM.
-ALTER TABLE events.venues ADD COLUMN IF NOT EXISTS render_mode text NOT NULL DEFAULT 'static';
-ALTER TABLE events.venues ADD COLUMN IF NOT EXISTS render_wait_selector text;
+COMMENT ON COLUMN events.venues.allow_zero_parse IS
+  'Source is legitimately empty at times (e.g. off-season sports feeds); suppresses the stuck-at-zero nag but not sharp-drop alerts.';
 
 CREATE INDEX IF NOT EXISTS venues_enabled_idx
     ON events.venues (enabled)
     WHERE enabled;
 
+-- Parsed events. Upserted after each scrape; rows no longer seen are soft-deleted.
+CREATE TABLE IF NOT EXISTS events.events (
+    id            bigserial PRIMARY KEY,
+    venue_id      integer NOT NULL REFERENCES events.venues(id) ON DELETE CASCADE,
+    title         text NOT NULL,
+    start_at      timestamptz NOT NULL,
+    end_at        timestamptz,
+    url           text NOT NULL,
+    emoji         text,                                       -- classifier emoji
+    artists       jsonb NOT NULL DEFAULT '[]'::jsonb,         -- LLM-extracted artist names (music/comedy)
+    time_known    boolean NOT NULL DEFAULT true,              -- false = placeholder midnight, render "TBA"
+    raw_source    text,
+    first_seen_at timestamptz NOT NULL DEFAULT now(),
+    last_seen_at  timestamptz NOT NULL DEFAULT now(),
+    deleted_at    timestamptz,
+    UNIQUE (venue_id, url, start_at)
+);
+
+CREATE INDEX IF NOT EXISTS events_start_idx
+    ON events.events (start_at)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS events_venue_idx
+    ON events.events (venue_id)
+    WHERE deleted_at IS NULL;
+
+-- Per-fetch audit log.
 CREATE TABLE IF NOT EXISTS events.fetch_log (
-    id         bigserial PRIMARY KEY,
-    venue_id   integer NOT NULL REFERENCES events.venues(id) ON DELETE CASCADE,
-    fetched_at timestamptz NOT NULL DEFAULT now(),
-    ok         boolean NOT NULL,
-    bytes      integer,
+    id          bigserial PRIMARY KEY,
+    venue_id    integer NOT NULL REFERENCES events.venues(id) ON DELETE CASCADE,
+    fetched_at  timestamptz NOT NULL DEFAULT now(),
+    ok          boolean NOT NULL,
+    bytes       integer,
     duration_ms integer,
-    error      text
+    error       text
 );
 
 CREATE INDEX IF NOT EXISTS fetch_log_venue_time_idx
     ON events.fetch_log (venue_id, fetched_at DESC);
 
 -- Seed your venues here (re-run-safe via ON CONFLICT DO NOTHING). Each row maps
--- a venue to the parser that handles its page. See scraper/parsers/ for the
--- available parser keys (ics, json_ld, espn_json, serpapi_search).
+-- a venue to the parser that handles its page. Available parser keys live in
+-- scraper/parsers/ (ics, json_ld, espn_json, serpapi_search).
 --
 -- INSERT INTO events.venues (slug, name, url, parser, schedule,
 --     render_mode, render_wait_selector, render_capture_match, enabled, notes)
