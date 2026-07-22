@@ -69,8 +69,3 @@ This ships as a blank template — no venues are seeded.
 1. **Venues** — add rows to `scraper/schema.sql` (`events.venues`), one per venue, each naming the parser that handles its page. Write parsers in `scraper/parsers/` (the `ParsedEvent` contract is in `parsers/__init__.py`). The bundled generic parsers cover most cases: `ics` (any iCalendar feed), `json_ld` (schema.org Event JSON-LD), `serpapi_search` (Google Events), `espn_json` (ESPN team schedules).
 2. **Sports** — set `CITY`, `STATE_CODE`, and `ESPN_TEAMS` in `bot/config.py` (team ids come from ESPN team-page URLs).
 3. **Branding** — update the title and colors in `ui/src`.
-
-## Notes
-
-- Deployment is left to you; `scraper/systemd/` and `bot/` include example
-  systemd unit + timer files (edit the `User=`/paths for your host).
